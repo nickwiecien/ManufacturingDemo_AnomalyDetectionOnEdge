@@ -3,14 +3,13 @@ resources:
   - webhook: 'ProcessEvent'
     connection: 'EventGrid'
 
-# trigger:
-#   branches:
-#     include:
-#     - main
-#   paths:
-#     include:
-#     - /IoT_MfgSiteEdgeDevice
-#     - /AML_ModelPackaging
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - /AML_ModelPackaging
     
 pool:
   vmImage: 'ubuntu-latest'
