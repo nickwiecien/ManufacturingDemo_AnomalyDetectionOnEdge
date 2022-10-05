@@ -95,6 +95,14 @@ with mlflow.start_run(run_name='autoencoder-run') as run:
         file.write(str(threshold))
     mlflow.log_artifact('threshold.txt')
     
+    # Champion vs. Challenger Logic
+    # Prior to registering the model - optionally pull the current best
+    # performing autoencoder from your model registry. Load this model
+    # and calculate reconstruction losses for the holdout dataset. 
+    # If reconstruction losses are larger (i.e., the model does a better 
+    # job distinguishing bad from good then register the new model.
+    # Otherwise do not proceeed with registration.
+    
     mlflow.register_model(model_uri, model_name)
 
 

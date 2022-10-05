@@ -62,21 +62,19 @@ def main():
     package.pull()
 
     subprocess.check_call(['docker', 'login', acr.address, '-u', acr.username, '-p', acr.password])
-    print('past login')
 
     subprocess.check_call(['docker', 'pull', location])
-    print('past pull')
+    
+    # Container testing.
+    # After pulling the model container to local compute, retrieve evaluation data from your AML workspace
+    # Recommend using the validation dataset. Pass that data through the models' exposed REST endpoint and 
+    # perform sanity checks (correct number of responses, etc.) to verify performance is as expected.
 
-    print(location)
-    print(os.getenv('CONTAINER_REGISTRY_ADDRESS') +'/' + str(model_name) + ':' + str(model_version))
     subprocess.check_call(['docker', 'tag', location, os.getenv('CONTAINER_REGISTRY_ADDRESS') +'/' + str(model_name) + ':' + str(model_version)])
-    print('past tag')
 
     subprocess.check_call(['docker', 'login', os.getenv('CONTAINER_REGISTRY_ADDRESS'), '-u', os.getenv('CONTAINER_REGISTRY_USERNAME'), '-p', os.getenv('CONTAINER_REGISTRY_PASSWORD')])
-    print('past login')
 
     subprocess.check_call(['docker', 'push', os.getenv('CONTAINER_REGISTRY_ADDRESS') +'/' + str(model_name) + ':' + str(model_version)])
-    print('past push')
 
 
 if __name__ == "__main__":
