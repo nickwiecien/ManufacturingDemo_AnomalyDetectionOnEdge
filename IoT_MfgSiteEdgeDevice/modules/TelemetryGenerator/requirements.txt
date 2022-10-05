@@ -1,0 +1,4 @@
+azure-iot-device~=2.7.0
+pandas==1.3.0
+azure-storage-queue==12.4.0
+pyarrow==9.0.0

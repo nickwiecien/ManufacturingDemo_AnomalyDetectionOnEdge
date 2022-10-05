@@ -1,0 +1,107 @@
+{
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.1",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "mfg-container-registry": {
+                "address": "${CONTAINER_REGISTRY_ADDRESS}",
+                "password": "${CONTAINER_REGISTRY_PASSWORD}",
+                "username": "${CONTAINER_REGISTRY_USERNAME}"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.4",
+              "createOptions": "{}"
+            },
+            "type": "docker"
+          },
+          "edgeHub": {
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.4",
+              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
+            },
+            "status": "running",
+            "type": "docker"
+          }
+        },
+        "modules": {
+          "TelemetryGenerator": {
+            "env": {
+              "STORAGE_ACCOUNT_KEY": {
+                "value": "${STORAGE_ACCOUNT_KEY}"
+              },
+              "STORAGE_ACCOUNT_URL": {
+                "value": "${STORAGE_ACCOUNT_URL}"
+              },
+              "STORAGE_ACCOUNT_QUEUE_NAME": {
+                "value": "${STORAGE_ACCOUNT_QUEUE_NAME}"
+              },
+              "IOTHUB_CONNECTION_STRING": {
+                "value": "${DEVICE_CONNECTION_STRING}"
+              }
+            },
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${CONTAINER_REGISTRY_ADDRESS}/telemetrygenerator:0.0.1-amd64",
+              "createOptions": "{}"
+            },
+            "status": "running",
+            "type": "docker",
+            "version": "1.0"
+          },
+          "AnomalyDetection": {
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${CONTAINER_REGISTRY_ADDRESS}/${MODEL_NAME}:${MODEL_VERSION_TAG}",
+              "createOptions": "{\"ExposedPorts\":{\"5001/tcp\":{}},\"HostConfig\":{\"PortBindings\":{\"5001/tcp\":[{\"HostPort\":\"5001\"}]}}}"
+            },
+            "status": "running",
+            "type": "docker"
+          },
+          "TelemetryMLScoring": {
+            "restartPolicy": "always",
+            "settings": {
+                "image": "novelisdsdemoacr.azurecr.io/data_scoring:0.0.1-amd64",
+                "createOptions": "{}"
+            },
+            "status": "running",
+            "type": "docker"
+        }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.2",
+        "routes": {
+          "TelemetryGeneratorToIoTHub": {
+            "route": "FROM /messages/modules/TelemetryGenerator/outputs/* INTO $upstream"
+          },
+          "TelemetryGeneratorToMLModel": {
+            "route": "FROM /messages/modules/TelemetryGenerator/outputs/output1 INTO BrokeredEndpoint(\"/modules/TelemetryMLScoring/inputs/rawtelemetry\")"
+          }
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "TelemetryGenerator": {
+      "properties.desired": {}
+    },
+    "AnomalyDetection": {
+      "properties.desired": {}
+    }
+  }
+}

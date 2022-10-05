@@ -1,0 +1,69 @@
+resources:       
+  webhooks:
+  - webhook: 'ProcessEvent'
+    connection: 'EventGrid'
+
+# trigger:
+#   branches:
+#     include:
+#     - main
+#   paths:
+#     include:
+#     - /IoT_MfgSiteEdgeDevice
+#     - /AML_ModelPackaging
+    
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- name: buildConfiguration 
+  value: 'Release'
+- group: azureml-variables
+
+stages:
+- stage:
+  displayName: 'Package and Test ML Model'
+  jobs:
+  - job: "python_containerize_test"
+    displayName: "Execute Python for Containerization and Testing"
+    steps:
+    - task: AzureCLI@1
+      inputs:
+        azureSubscription: '$(WORKSPACE_SVC_CONNECTION)'
+        scriptLocation: inlineScript
+        workingDirectory: $(Build.SourcesDirectory)/AML_ModelPackaging
+        inlineScript: |
+          echo ${{parameters.ProcessEvent.model_name}}
+          echo ${{parameters.ProcessEvent.model_version}}
+          python -m pip install azureml-defaults==1.44.0 mlflow==1.28.0 azureml-mlflow==1.44.0
+          python -m  package_model --model_name ${{parameters.ProcessEvent.model_name}} --model_version ${{parameters.ProcessEvent.model_version}}
+      name: 'packagemodel'
+      displayName: 'Package Model with AzureML'
+
+- stage:
+  displayName: 'Update and Push Deployment Manifest'
+  condition: succeeded()
+  jobs:
+  - job: "create_and_push_deployment_manifest"
+    displayName: "Update and Push Deployment Manifest"
+    variables:
+        MODEL_VERSION_TAG: ${{parameters.ProcessEvent.model_version}}
+        MODEL_NAME: ${{parameters.ProcessEvent.model_name}}
+    steps:
+    - task: Bash@3
+      displayName: 'Format Deployment Manifest'
+      inputs:
+        targetType: 'inline'
+        workingDirectory: $(Build.SourcesDirectory)/AML_ModelPackaging
+        script: 'python -m update_deployment_manifest --deployment_manifest_path "../IoT_MfgSiteEdgeDevice/config/deployment.amd64.json" --deployment_template_path "../IoT_MfgSiteEdgeDevice/deployment.template.json"'
+
+    - task: AzureCLI@1
+      displayName: 'Push Deployment Manifest to Device'
+      inputs:
+        azureSubscription: '$(AZ_SVC_CONNECTION)'
+        scriptLocation: inlineScript
+        workingDirectory: $(Build.SourcesDirectory)
+        inlineScript: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az iot edge set-modules --hub-name ${HUB_NAME} --device-id ${DEVICE_ID} --content "IoT_MfgSiteEdgeDevice/config/deployment.amd64.json" --login "${IOTHUB_CONNECTION_STRING}" --resource-group ${RESOURCE_GROUP}
+      name: 'setenv'

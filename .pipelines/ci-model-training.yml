@@ -1,0 +1,48 @@
+pr:
+  branches:
+    exclude:
+      - '*'
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - /AML_ModelTrainingPipeline
+
+variables:
+- group: azureml-variables
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: 'Publish_AML_Pipeline_Dev'
+  displayName: 'Publish AML Pipeline'
+  jobs:
+  - job: "AML_PIPELINE"
+    displayName: "Build and Publish AML Pipeline"
+    timeoutInMinutes: 0
+    steps:
+    - task: Bash@3
+      inputs:
+        scriptLocation: inlineScript
+        workingDirectory: $(Build.SourcesDirectory)/AML_ModelTrainingPipeline
+        targetType: inline
+        script: |
+          python -m pip install jupyter nbconvert
+          jupyter nbconvert --to script AML_CreateTrainingPipeline.ipynb
+      displayName: 'Convert Jupyter Notebook to Python Script'
+
+    - task: AzureCLI@1
+      inputs:
+        azureSubscription: '$(WORKSPACE_SVC_CONNECTION)'
+        scriptLocation: inlineScript
+        workingDirectory: $(Build.SourcesDirectory)/AML_ModelTrainingPipeline
+        inlineScript: |
+          set -e # fail on error
+          export SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          # Invoke the Python building and publishing a training pipeline
+          python -m pip install azureml-defaults==1.44.0 azureml-pipeline-core==1.44.0 azureml-pipeline-steps==1.44.0
+          python -m AML_CreateTrainingPipeline
+      displayName: 'Publish AML Training Pipeline'

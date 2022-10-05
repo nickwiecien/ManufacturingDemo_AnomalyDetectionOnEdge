@@ -1,0 +1,37 @@
+
+                    "5679/tcp": {}
+                },
+                "HostConfig": {
+                  "PortBindings": {
+                    "5679/tcp": [
+                      {
+                        "HostPort": "5679"
+                      }
+                    ]
+                  }
+                }
+              }
+          },
+          "status": "running",
+          "type": "docker"
+      }
+      }
+    }
+  },
+  "$edgeHub": {
+    "properties.desired": {
+        "schemaVersion": "1.2",
+        "routes": {"TelemetryGeneratorToIoTHub": "FROM /messages/modules/TelemetryGenerator/outputs/* INTO $upstream"},
+        "storeAndForwardConfiguration": {
+            "timeToLiveSecs": 7200
+        }
+    }
+},
+"TelemetryGenerator": {
+    "properties.desired": {}
+},
+"AnomalyDetection": {
+    "properties.desired": {}
+}
+}
+}
